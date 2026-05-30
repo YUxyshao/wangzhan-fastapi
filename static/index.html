@@ -10,23 +10,41 @@
     <button onclick="download()">下载</button>
     <h1 id="return"></h1>
     <script>
-        function download() {
-            let url = document.getElementById("url").value;
-            fetch("/api/download", {
+     function download() {
+    let url = document.getElementById("url").value;
+    fetch("/api/download/img", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            url: url
+        })
+    })
+    .then(response=>response.json())
+    .then(data=>{
+        document.getElementById('return').textContent = data.message;
+        for(let imgurl of data.imgs) {
+            fetch("/api/fetch/img", {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    url: url
+                    imgurl: imgurl
                 })
             })
-             .then(response=>response.json())
-             .then(data=>{document.getElementById('return').textContent = data.message
-       })
+            .then(response=>response.blob())
+            .then(data=>{
+                let url = URL.createObjectURL(data);
+                let a = document.createElement('a');
+                a.href = url;
+                a.download = 'image.jpg';
+                a.click();
+            })
         }
-
-
+    })
+}
     </script>
 </body>
 </html>
