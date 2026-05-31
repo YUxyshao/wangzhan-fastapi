@@ -9,13 +9,17 @@ import httpx
 from bs4 import BeautifulSoup 
 from urllib.parse import urljoin
 from fastapi.responses import Response
+import io
+import zipfile
+
 
 
 class DownloadRequest(BaseModel):
     url: str
 
 class FetchRequest(BaseModel):
-    imgurl: str
+    imgurl_list: list[str]
+
 
 
 app = FastAPI()
@@ -47,8 +51,17 @@ async def download(item: DownloadRequest):
 
 @app.post("/api/fetch/img")
 async def fetch_img(item: FetchRequest):
-    response = await client.get(item.imgurl)
-    return Response(content=response.content)
+    bio= io.BytesIO()
+    with zipfile.ZipFile(bio,'w') as zip:
+        for idx,imgurl in enumerate(item.imgurl_list):
+            try:
+                response = await client.get(imgurl)
+                zip.writestr(f"img{idx}.png",response.content)
+            except:
+                continue
+    bio.seek(0)
+     
+    return Response(content=bio.read(),media_type="application/zip")
 
 
 @app.get("/")

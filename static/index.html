@@ -24,25 +24,23 @@
     .then(response=>response.json())
     .then(data=>{
         document.getElementById('return').textContent = data.message;
-        for(let imgurl of data.imgs) {
-            fetch("/api/fetch/img", {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    imgurl: imgurl
-                })
+        fetch("/api/fetch/img", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                imgurl_list: data.imgs
             })
-            .then(response=>response.blob())
-            .then(data=>{
-                let url = URL.createObjectURL(data);
-                let a = document.createElement('a');
-                a.href = url;
-                a.download = 'image.jpg';
-                a.click();
-            })
-        }
+        })
+        .then(response=>response.blob())
+        .then(data=>{
+            let url = URL.createObjectURL(data);
+            let a = document.createElement('a');
+            a.href = url;
+            a.download = 'image.zip';
+            a.click();
+        })
     })
 }
     </script>
