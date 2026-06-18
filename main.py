@@ -11,6 +11,8 @@ from urllib.parse import urljoin
 from fastapi.responses import Response
 import io
 import zipfile
+import base64
+
 
 
 
@@ -40,10 +42,17 @@ async def download(item: DownloadRequest):
         soup = BeautifulSoup(response.text, 'html.parser')
         soup_url = soup.find_all('img')
         src_img_url_list = []
-        for img_url in soup_url:
-            src_img = img_url.get('src')
-            if src_img:
-                src_img_url_list.append(urljoin(url, src_img))
+        for img_url in soup_url:                    
+                    src_img = img_url.get('src')
+                    if not src_img:
+                        continue
+                    if src_img.startswith("data:image"):
+                        src_img_url_list.append(src_img)
+                    elif not src_img.startswith("http") and not src_img.startswith("https"):
+                        src_img_url_list.append(urljoin(url, src_img))
+                    
+                    else:
+                         src_img_url_list.append(src_img)
 
         return {"imgs": src_img_url_list,"message": "成功"}
     except :
@@ -55,8 +64,12 @@ async def fetch_img(item: FetchRequest):
     with zipfile.ZipFile(bio,'w') as zip:
         for idx,imgurl in enumerate(item.imgurl_list):
             try:
-                response = await client.get(imgurl)
-                zip.writestr(f"img{idx}.png",response.content)
+                if imgurl.startswith("data:image"):                  
+                    img_bytes = base64.b64decode(imgurl.split(",")[1])
+                    zip.writestr(f"img{idx}.png",img_bytes)
+                else:
+                    response = await client.get(imgurl)
+                    zip.writestr(f"img{idx}.png",response.content)
             except:
                 continue
     bio.seek(0)
