@@ -1,0 +1,16 @@
+body {
+    background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+    text-align: center;
+}
+h1, #return { color: #ecf0f1; }
+button {
+    background: linear-gradient(135deg, #fd746c 0%, #ff9068 100%);
+    color: #ffffff;
+}
+input {
+    background: rgba(255,255,255,0.9);
+    color: #2c3e50;
+}
+#url {
+    border-radius: 50px;
+}
