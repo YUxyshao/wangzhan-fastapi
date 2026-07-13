@@ -12,7 +12,7 @@ from fastapi.responses import Response
 import io
 import zipfile
 import base64
-
+import asyncio
 
 
 
@@ -31,12 +31,15 @@ def  get_image_name(imgurl: str)->str:
     if imgurl.startswith(("http://", "https://")):
         imgurl_parsed = urlparse(imgurl)
         file_name = imgurl_parsed.path.split("/")[-1]
+        if '?' in file_name:
+            file_name = file_name.split('?')[0]
+        if '!' in file_name:
+            file_name = file_name.split('!')[0]
         return file_name
     return ".png"
 
 
-
-
+semaphore = asyncio.Semaphore(10)
 
 app = FastAPI()
 app.mount("/static",StaticFiles(directory="static"))
@@ -77,18 +80,28 @@ async def download(item: DownloadRequest):
 async def fetch_img(item: FetchRequest):
     if not item.imgurl_list:
         return {"message": "没有找到图片"}
+    
+    async def task(url):
+        async with semaphore:
+            res = await client.get(url)
+            return res.content
+    
+    # 并发下载
+    tasks = [task(url) for url in item.imgurl_list]
+    results = await asyncio.gather(*tasks)
+    
+   
     bio= io.BytesIO()
     with zipfile.ZipFile(bio,'w') as zip:
-        for idx,imgurl in enumerate(item.imgurl_list):
+        for idx,img_data in enumerate(results):
             try:
-                if imgurl.startswith("data:image"):                  
-                    img_bytes = base64.b64decode(imgurl.split(",")[1])
+                original_url = item.imgurl_list[idx]
+                if original_url.startswith("data:image"):                  
+                    img_bytes = base64.b64decode(original_url.split(",")[1])
                    
-                    zip.writestr(f"img{idx}{get_image_name(imgurl)}",img_bytes)
-                else:                  
-                    response = await client.get(imgurl)
-                    
-                    zip.writestr(get_image_name(imgurl),response.content)
+                    zip.writestr(f"img{idx}{get_image_name(original_url)}",img_bytes)
+                else:            
+                        zip.writestr(get_image_name(original_url),img_data)
             except:
                 continue
     bio.seek(0)
